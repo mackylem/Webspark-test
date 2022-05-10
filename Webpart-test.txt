@@ -23,24 +23,6 @@ Resources:
       BucketName: !Ref 'BucketName'
       AccessControl: PublicRead
 
-  S3Policy:
-    Type: 'AWS::S3::BucketPolicy'
-    Properties:
-      Bucket: !Ref S3Bucket
-      PolicyDocument: 
-        Id: TestPolicy
-        Version: 2022-05-08
-        Statement:
-          - Sid: "PublicReadForBucket"
-            Effect: Allow
-            Principal: '*'
-            Action: 's3:GetObject'
-            Resource: !Join
-              - ''
-              - - 'arn:aws:s3:::'
-                - !Ref S3Bucket
-                - '/*'
-
  
   CloudFrontForS3:
     Type: 'AWS::CloudFront::Distribution'
@@ -70,13 +52,40 @@ Resources:
 
 
   WebsiteDNSName:
-    Type: 'AWS::Route53::RecordSet'
+    Type: 'AWS::Route53::RecordSetGroup'
     Properties:
-      AliasTarget: !Ref CloudFrontForS3
-      HostedZoneId: !Ref HostedZoneId 
-      Name: !Ref DomainName
-      Type: A
-      TTL: '900'
+      HostedZoneId: !Ref HostedZoneId
+      RecordSets:
+        - Name: !Ref DomainName
+          Type: A
+          TTL: '900'
+          AliasTarget: 
+            DNSName: !GetAtt 
+              - CloudFrontForS3
+              - DomainName
+       
+
+  S3Policy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument: 
+        Id: TestPolicy
+        Version: 2022-05-08
+        Statement:
+          - Sid: "1"
+            Effect: Allow
+            Principal: 
+              AWS: !Join
+                - ''
+                - - 'arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity '
+                  - !Ref CloudFrontForS3
+            Action: 's3:GetObject'
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3Bucket
+                - '/*'
 
 Outputs:
   CloudFrontID:
